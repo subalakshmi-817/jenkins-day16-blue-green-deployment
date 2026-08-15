@@ -1,0 +1,975 @@
+============================================================
+JENKINS DAY 16 – BLUE-GREEN DEPLOYMENT
+============================================================
+
+Author: Subalakshmi K
+
+Project:
+Jenkins + Docker Blue-Green Deployment
+
+Tools:
+Linux
+Git
+GitHub
+Jenkins
+Docker
+Nginx
+
+============================================================
+1. PROJECT OBJECTIVE
+============================================================
+
+The objective of Day 16 is to understand and implement
+Blue-Green Deployment using Jenkins and Docker.
+
+The project contains two application environments:
+
+BLUE
+GREEN
+
+Blue represents the current application version.
+
+Green represents the new application version.
+
+The new version can be deployed and tested separately
+before switching production traffic.
+
+============================================================
+2. WHAT IS BLUE-GREEN DEPLOYMENT?
+============================================================
+
+Blue-Green Deployment is a deployment strategy where two
+environments are maintained.
+
+BLUE:
+Current stable application.
+
+GREEN:
+New application version.
+
+Example:
+
+Blue  = Version 1.0
+Green = Version 2.0
+
+Version 2.0 is first deployed to Green.
+
+After successful testing:
+
+Green becomes production.
+
+If Green fails:
+
+Blue remains available.
+
+This provides a safer deployment and easier rollback.
+
+============================================================
+3. WHY BLUE-GREEN DEPLOYMENT?
+============================================================
+
+Traditional deployment can cause downtime.
+
+Example:
+
+Stop old application
+        ↓
+Deploy new application
+        ↓
+Start new application
+
+During this period, users may experience downtime.
+
+Blue-Green Deployment avoids this problem by maintaining
+two environments.
+
+Blue continues running while Green is prepared.
+
+============================================================
+4. PROJECT ARCHITECTURE
+============================================================
+
+Developer
+   |
+   v
+GitHub
+   |
+   v
+Jenkins
+   |
+   +----------------+
+   |                |
+   v                v
+Blue Image       Green Image
+   |                |
+   v                v
+Blue Container   Green Container
+   |                |
+   +--------+-------+
+            |
+            v
+       Health Checks
+            |
+            v
+      Deployment Verify
+
+============================================================
+5. PROJECT STRUCTURE
+============================================================
+
+jenkins-day16-blue-green-deployment/
+
+blue/
+    Dockerfile
+    index.html
+
+green/
+    Dockerfile
+    index.html
+
+Jenkinsfile
+
+screenshots/
+
+============================================================
+6. BLUE ENVIRONMENT
+============================================================
+
+Blue represents the current application.
+
+Docker image:
+
+day16-blue
+
+Build command:
+
+docker build -t day16-blue ./blue
+
+Run command:
+
+docker run -d \
+--name day16-blue-container \
+-p 8081:80 \
+day16-blue
+
+Access:
+
+http://localhost:8081
+
+============================================================
+7. GREEN ENVIRONMENT
+============================================================
+
+Green represents the new application.
+
+Docker image:
+
+day16-green
+
+Build command:
+
+docker build -t day16-green ./green
+
+Run command:
+
+docker run -d \
+--name day16-green-container \
+-p 8082:80 \
+day16-green
+
+Access:
+
+http://localhost:8082
+
+============================================================
+8. DOCKERFILE
+============================================================
+
+Typical Dockerfile:
+
+FROM nginx:alpine
+
+COPY index.html /usr/share/nginx/html/index.html
+
+Nginx is used as the web server.
+
+The HTML file is copied into the Nginx web root.
+
+============================================================
+9. BUILD DOCKER IMAGES
+============================================================
+
+Build Blue:
+
+docker build -t day16-blue ./blue
+
+Build Green:
+
+docker build -t day16-green ./green
+
+Check images:
+
+docker images
+
+Expected images:
+
+day16-blue
+day16-green
+
+============================================================
+10. RUN CONTAINERS
+============================================================
+
+Blue:
+
+docker run -d \
+--name day16-blue-container \
+-p 8081:80 \
+day16-blue
+
+Green:
+
+docker run -d \
+--name day16-green-container \
+-p 8082:80 \
+day16-green
+
+============================================================
+11. CHECK CONTAINERS
+============================================================
+
+Command:
+
+docker ps
+
+Check all containers:
+
+docker ps -a
+
+Expected:
+
+day16-blue-container
+day16-green-container
+
+============================================================
+12. APPLICATION TESTING
+============================================================
+
+Blue:
+
+curl http://localhost:8081
+
+Green:
+
+curl http://localhost:8082
+
+Browser:
+
+http://localhost:8081
+
+http://localhost:8082
+
+============================================================
+13. HEALTH CHECK
+============================================================
+
+Blue:
+
+curl -I http://localhost:8081
+
+Green:
+
+curl -I http://localhost:8082
+
+Expected:
+
+HTTP/1.1 200 OK
+
+This means the application is responding successfully.
+
+============================================================
+14. DOCKER LOGS
+============================================================
+
+Blue logs:
+
+docker logs day16-blue-container
+
+Green logs:
+
+docker logs day16-green-container
+
+Logs help identify application problems.
+
+============================================================
+15. JENKINS PIPELINE
+============================================================
+
+Jenkins automates the deployment process.
+
+Pipeline stages:
+
+1. Checkout
+2. Build Blue Image
+3. Build Green Image
+4. Remove Old Containers
+5. Deploy Blue
+6. Health Check Blue
+7. Deploy Green
+8. Health Check Green
+9. Verify Deployment
+
+============================================================
+16. CHECKOUT STAGE
+============================================================
+
+Jenkins downloads the source code from GitHub.
+
+Repository:
+
+jenkins-day16-blue-green-deployment
+
+Jenkins obtains:
+
+Jenkinsfile
+blue/
+green/
+
+============================================================
+17. BUILD BLUE IMAGE
+============================================================
+
+Jenkins executes:
+
+docker build -t day16-blue ./blue
+
+This creates the Blue Docker image.
+
+============================================================
+18. BUILD GREEN IMAGE
+============================================================
+
+Jenkins executes:
+
+docker build -t day16-green ./green
+
+This creates the Green Docker image.
+
+============================================================
+19. REMOVE OLD CONTAINERS
+============================================================
+
+Old containers may already exist.
+
+Example:
+
+docker rm -f day16-blue-container || true
+
+docker rm -f day16-green-container || true
+
+The || true prevents Jenkins from failing if the
+container does not exist.
+
+============================================================
+20. DEPLOY BLUE
+============================================================
+
+Command:
+
+docker run -d \
+--name day16-blue-container \
+-p 8081:80 \
+day16-blue
+
+Blue becomes available on port 8081.
+
+============================================================
+21. BLUE HEALTH CHECK
+============================================================
+
+Command:
+
+curl -I http://localhost:8081
+
+Expected:
+
+HTTP/1.1 200 OK
+
+============================================================
+22. DEPLOY GREEN
+============================================================
+
+Command:
+
+docker run -d \
+--name day16-green-container \
+-p 8082:80 \
+day16-green
+
+Green becomes available on port 8082.
+
+============================================================
+23. GREEN HEALTH CHECK
+============================================================
+
+Command:
+
+curl -I http://localhost:8082
+
+Expected:
+
+HTTP/1.1 200 OK
+
+============================================================
+24. DEPLOYMENT VERIFICATION
+============================================================
+
+Check containers:
+
+docker ps
+
+Check images:
+
+docker images
+
+Check Blue:
+
+curl http://localhost:8081
+
+Check Green:
+
+curl http://localhost:8082
+
+============================================================
+25. JENKINS JOB
+============================================================
+
+Job Name:
+
+Day16-Blue-Green-Deployment
+
+Job Type:
+
+Pipeline
+
+Pipeline Definition:
+
+Pipeline script from SCM
+
+SCM:
+
+Git
+
+Repository:
+
+https://github.com/subalakshmi-817/jenkins-day16-blue-green-deployment.git
+
+Branch:
+
+*/main
+
+Script Path:
+
+Jenkinsfile
+
+============================================================
+26. JENKINS BUILD
+============================================================
+
+Open:
+
+Jenkins
+
+↓
+
+Day16-Blue-Green-Deployment
+
+↓
+
+Build Now
+
+↓
+
+Build Number
+
+↓
+
+Console Output
+
+Monitor all stages.
+
+============================================================
+27. EXPECTED SUCCESS
+============================================================
+
+Checkout                     SUCCESS
+
+Build Blue Image             SUCCESS
+
+Build Green Image            SUCCESS
+
+Remove Old Containers        SUCCESS
+
+Deploy Blue                  SUCCESS
+
+Health Check Blue            SUCCESS
+
+Deploy Green                 SUCCESS
+
+Health Check Green           SUCCESS
+
+Verify Deployment            SUCCESS
+
+Final:
+
+SUCCESS
+
+============================================================
+28. GITHUB
+============================================================
+
+Repository:
+
+jenkins-day16-blue-green-deployment
+
+Git commands:
+
+git status
+
+git add .
+
+git commit -m "Update Day 16 deployment"
+
+git push
+
+============================================================
+29. IMPORTANT GIT STRUCTURE
+============================================================
+
+Correct:
+
+jenkins-day16-blue-green-deployment/
+
+blue/
+green/
+Jenkinsfile
+
+Incorrect:
+
+jenkins-day16-blue-green-deployment/
+
+jenkins-day16-blue-green-deployment/
+
+blue/
+green/
+
+Jenkins must be able to find:
+
+./blue
+
+./green
+
+============================================================
+30. ROLLBACK
+============================================================
+
+Suppose:
+
+Blue = Version 1.0
+Green = Version 2.0
+
+If Green fails:
+
+Green = FAILED
+
+Blue = STABLE
+
+Traffic can remain on Blue.
+
+This provides quick rollback.
+
+============================================================
+31. ADVANTAGES
+============================================================
+
+1. Minimal downtime
+2. Safer deployment
+3. Easy rollback
+4. Independent testing
+5. Automated deployment
+6. Docker isolation
+7. Jenkins automation
+8. Better release management
+
+============================================================
+32. LIMITATIONS
+============================================================
+
+1. Requires additional resources.
+2. Two environments must be maintained.
+3. Database migration needs careful planning.
+4. Traffic switching needs proper configuration.
+5. Monitoring is important.
+
+============================================================
+33. TROUBLESHOOTING
+============================================================
+
+Docker not running:
+
+sudo systemctl status docker
+
+Start Docker:
+
+sudo systemctl start docker
+
+Restart Docker:
+
+sudo systemctl restart docker
+
+Check Docker:
+
+docker version
+
+============================================================
+34. JENKINS DOCKER PERMISSION
+============================================================
+
+Check:
+
+groups jenkins
+
+Jenkins should have Docker access.
+
+If required:
+
+sudo usermod -aG docker jenkins
+
+Restart Jenkins:
+
+sudo systemctl restart jenkins
+
+============================================================
+35. PORT PROBLEM
+============================================================
+
+Check:
+
+docker ps
+
+Check port:
+
+sudo ss -tulpn | grep 8081
+
+Check port 8082:
+
+sudo ss -tulpn | grep 8082
+
+Remove container:
+
+docker rm -f day16-blue-container
+
+============================================================
+36. JENKINS BLUE DIRECTORY ERROR
+============================================================
+
+Error:
+
+path "./blue" not found
+
+Reason:
+
+GitHub does not contain the blue directory at the
+repository root.
+
+Correct structure:
+
+blue/Dockerfile
+blue/index.html
+
+green/Dockerfile
+green/index.html
+
+============================================================
+37. DOCKER HUB
+============================================================
+
+This project does not require Docker Hub for the basic
+Blue-Green deployment.
+
+Docker images can be built locally on the Jenkins server.
+
+Optional future improvement:
+
+Push images to Docker Hub.
+
+Example:
+
+docker tag day16-blue username/day16-blue:latest
+
+docker push username/day16-blue:latest
+
+============================================================
+38. CI/CD CONCEPT
+============================================================
+
+CI means Continuous Integration.
+
+Developers frequently integrate code into Git.
+
+CD means Continuous Delivery or Continuous Deployment.
+
+Jenkins can automatically build and deploy the application.
+
+Workflow:
+
+Developer
+   ↓
+GitHub
+   ↓
+Jenkins
+   ↓
+Docker Build
+   ↓
+Deployment
+   ↓
+Testing
+   ↓
+Production
+
+============================================================
+39. DEVOPS WORKFLOW
+============================================================
+
+PLAN
+ ↓
+CODE
+ ↓
+BUILD
+ ↓
+TEST
+ ↓
+RELEASE
+ ↓
+DEPLOY
+ ↓
+OPERATE
+ ↓
+MONITOR
+
+Day 16 focuses mainly on:
+
+BUILD
+DEPLOY
+TEST
+VERIFY
+
+============================================================
+40. REAL-TIME EXAMPLE
+============================================================
+
+E-commerce application:
+
+Blue:
+
+Shopping Website v1.0
+
+Green:
+
+Shopping Website v2.0
+
+Developers deploy v2.0 to Green.
+
+Automated tests check Green.
+
+If Green succeeds:
+
+Traffic → Green
+
+If Green fails:
+
+Traffic → Blue
+
+============================================================
+41. LEARNING OUTCOMES
+============================================================
+
+After completing Day 16:
+
+I learned:
+
+Git
+GitHub
+Linux
+Docker
+Dockerfile
+Nginx
+Jenkins
+Jenkins Pipeline
+CI/CD
+Blue-Green Deployment
+Health Checks
+Container Management
+Deployment Verification
+Rollback Concepts
+
+============================================================
+42. FUTURE IMPROVEMENTS
+============================================================
+
+Future versions can include:
+
+Docker Compose
+Nginx Reverse Proxy
+Load Balancer
+Prometheus
+Grafana
+Automatic Rollback
+GitHub Webhook
+Slack Notifications
+Email Notifications
+Kubernetes
+AWS EC2
+HTTPS
+Docker Security Scanning
+
+============================================================
+43. PROJECT FLOW
+============================================================
+
+GitHub
+   ↓
+Jenkins
+   ↓
+Checkout
+   ↓
+Build Blue
+   ↓
+Build Green
+   ↓
+Remove Old Containers
+   ↓
+Deploy Blue
+   ↓
+Health Check Blue
+   ↓
+Deploy Green
+   ↓
+Health Check Green
+   ↓
+Verify
+   ↓
+SUCCESS
+
+============================================================
+44. IMPORTANT COMMANDS
+============================================================
+
+Check Docker:
+
+docker --version
+
+Check containers:
+
+docker ps
+
+Check all containers:
+
+docker ps -a
+
+Check images:
+
+docker images
+
+Build Blue:
+
+docker build -t day16-blue ./blue
+
+Build Green:
+
+docker build -t day16-green ./green
+
+Run Blue:
+
+docker run -d --name day16-blue-container -p 8081:80 day16-blue
+
+Run Green:
+
+docker run -d --name day16-green-container -p 8082:80 day16-green
+
+Blue test:
+
+curl http://localhost:8081
+
+Green test:
+
+curl http://localhost:8082
+
+Blue health:
+
+curl -I http://localhost:8081
+
+Green health:
+
+curl -I http://localhost:8082
+
+Docker logs:
+
+docker logs day16-blue-container
+
+docker logs day16-green-container
+
+============================================================
+45. PROJECT SUMMARY
+============================================================
+
+Jenkins Day 16 demonstrates how Jenkins and Docker can be
+used to automate Blue-Green Deployment.
+
+Blue represents the current stable environment.
+
+Green represents the new environment.
+
+Jenkins builds both Docker images and performs deployment
+and health checks.
+
+The project provides practical experience in DevOps,
+CI/CD, Linux, GitHub, Jenkins and Docker.
+
+============================================================
+46. FINAL RESULT
+============================================================
+
+GitHub
+   ↓
+Jenkins
+   ↓
+Docker
+   ↓
+Blue Environment
+   +
+Green Environment
+   ↓
+Health Check
+   ↓
+Deployment Verification
+   ↓
+SUCCESS
+
+============================================================
+END OF JENKINS DAY 16 NOTES
+============================================================
+
+Author:
+Subalakshmi K
+
+Project:
+Jenkins Day 16 – Blue-Green Deployment with Docker
+
+Status:
+Completed / In Progress
+
+Learning:
+DevOps | Jenkins | Docker | GitHub | Linux | CI/CD
+
+============================================================
