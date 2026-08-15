@@ -1,0 +1,3677 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <meta name="description"
+          content="Jenkins Day 16 Blue Green Deployment Dashboard">
+
+    <meta name="author"
+          content="Jenkins DevOps Project">
+
+    <title>Jenkins Day 16 | Blue-Green Deployment</title>
+
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background:
+                linear-gradient(
+                    135deg,
+                    #06142e,
+                    #0b2d5c,
+                    #075985,
+                    #0f172a
+                );
+            color: white;
+            min-height: 100vh;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(3, 15, 35, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            padding: 18px 8%;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 25px;
+            font-weight: bold;
+            color: #38bdf8;
+        }
+
+        .logo span {
+            color: white;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 25px;
+        }
+
+        nav ul li a {
+            color: #dbeafe;
+            text-decoration: none;
+            font-size: 15px;
+            transition: 0.3s;
+        }
+
+        nav ul li a:hover {
+            color: #38bdf8;
+        }
+
+        .hero {
+            min-height: 650px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 80px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: #0284c7;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.35;
+            top: -100px;
+            left: -100px;
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            width: 350px;
+            height: 350px;
+            background: #2563eb;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.3;
+            bottom: -100px;
+            right: -100px;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: 900px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(56,189,248,0.15);
+            border: 1px solid #38bdf8;
+            border-radius: 50px;
+            color: #7dd3fc;
+            margin-bottom: 25px;
+        }
+
+        .hero h1 {
+            font-size: 65px;
+            line-height: 1.1;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 span {
+            color: #38bdf8;
+        }
+
+        .hero p {
+            color: #cbd5e1;
+            font-size: 19px;
+            line-height: 1.8;
+            margin-bottom: 35px;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .primary {
+            background: #0284c7;
+            color: white;
+            box-shadow: 0 10px 30px rgba(2,132,199,0.35);
+        }
+
+        .primary:hover {
+            transform: translateY(-4px);
+            background: #0369a1;
+        }
+
+        .secondary {
+            border: 1px solid #38bdf8;
+            color: #7dd3fc;
+        }
+
+        .secondary:hover {
+            background: rgba(56,189,248,0.12);
+        }
+
+        section {
+            padding: 90px 8%;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 55px;
+        }
+
+        .section-title h2 {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .section-title p {
+            color: #94a3b8;
+            font-size: 16px;
+        }
+
+        .status-container {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .status-card {
+            padding: 35px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(10px);
+            transition: 0.3s;
+        }
+
+        .status-card:hover {
+            transform: translateY(-8px);
+            border-color: #38bdf8;
+        }
+
+        .status-icon {
+            font-size: 45px;
+            margin-bottom: 20px;
+        }
+
+        .status-card h3 {
+            font-size: 25px;
+            margin-bottom: 12px;
+        }
+
+        .status-card p {
+            color: #94a3b8;
+            line-height: 1.7;
+        }
+
+        .active {
+            color: #38bdf8;
+        }
+
+        .success {
+            color: #4ade80;
+        }
+
+        .warning {
+            color: #facc15;
+        }
+
+        .danger {
+            color: #fb7185;
+        }
+
+        .pipeline {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            align-items: center;
+        }
+
+        .pipeline-step {
+            text-align: center;
+            padding: 30px 15px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+        }
+
+        .pipeline-step .number {
+            width: 50px;
+            height: 50px;
+            margin: auto;
+            margin-bottom: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0284c7;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .pipeline-step h3 {
+            margin-bottom: 10px;
+        }
+
+        .pipeline-step p {
+            color: #94a3b8;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .arrow {
+            text-align: center;
+            font-size: 30px;
+            color: #38bdf8;
+        }
+
+        .deployment-box {
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(2,132,199,0.25),
+                    rgba(30,64,175,0.2)
+                );
+            border: 1px solid rgba(56,189,248,0.3);
+            border-radius: 25px;
+            padding: 50px;
+        }
+
+        .deployment-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .environment {
+            padding: 30px;
+            border-radius: 20px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .environment.blue {
+            border-top: 5px solid #3b82f6;
+        }
+
+        .environment.green {
+            border-top: 5px solid #22c55e;
+        }
+
+        .environment h3 {
+            font-size: 27px;
+            margin-bottom: 15px;
+        }
+
+        .environment p {
+            color: #94a3b8;
+            line-height: 1.7;
+        }
+
+        .environment ul {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        .environment ul li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            color: #cbd5e1;
+        }
+
+        .environment ul li::before {
+            content: "✓ ";
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 35px 20px;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stat-card h3 {
+            font-size: 45px;
+            color: #38bdf8;
+            margin-bottom: 8px;
+        }
+
+        .stat-card p {
+            color: #94a3b8;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+        }
+
+        .tech {
+            padding: 30px;
+            text-align: center;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.3s;
+        }
+
+        .tech:hover {
+            transform: scale(1.05);
+            background: rgba(56,189,248,0.1);
+        }
+
+        .tech-icon {
+            font-size: 45px;
+            margin-bottom: 15px;
+        }
+
+        .tech h3 {
+            margin-bottom: 8px;
+        }
+
+        .tech p {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .timeline {
+            max-width: 850px;
+            margin: auto;
+            position: relative;
+        }
+
+        .timeline::before {
+            content: "";
+            position: absolute;
+            left: 20px;
+            top: 0;
+            width: 3px;
+            height: 100%;
+            background: #0284c7;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 70px;
+            margin-bottom: 35px;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: 7px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #38bdf8;
+            border: 6px solid #082f49;
+        }
+
+        .timeline-content {
+            padding: 25px;
+            border-radius: 15px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .timeline-content h3 {
+            margin-bottom: 10px;
+            color: #7dd3fc;
+        }
+
+        .timeline-content p {
+            color: #94a3b8;
+            line-height: 1.7;
+        }
+
+        .terminal {
+            max-width: 900px;
+            margin: auto;
+            background: #020617;
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid #334155;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+        }
+
+        .terminal-header {
+            background: #111827;
+            padding: 14px 20px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .circle {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .red {
+            background: #ef4444;
+        }
+
+        .yellow {
+            background: #eab308;
+        }
+
+        .green-dot {
+            background: #22c55e;
+        }
+
+        .terminal-title {
+            margin-left: 10px;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        .terminal-body {
+            padding: 30px;
+            font-family: monospace;
+            color: #4ade80;
+            line-height: 2;
+            overflow-x: auto;
+        }
+
+        .terminal-blue {
+            color: #38bdf8;
+        }
+
+        .terminal-white {
+            color: #e2e8f0;
+        }
+
+        .terminal-yellow {
+            color: #facc15;
+        }
+
+        .progress-container {
+            margin-top: 25px;
+        }
+
+        .progress-title {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .progress-title span {
+            color: #cbd5e1;
+        }
+
+        .progress {
+            height: 10px;
+            background: #1e293b;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background:
+                linear-gradient(
+                    90deg,
+                    #0284c7,
+                    #38bdf8
+                );
+            border-radius: 20px;
+        }
+
+        .w90 {
+            width: 90%;
+        }
+
+        .w95 {
+            width: 95%;
+        }
+
+        .w80 {
+            width: 80%;
+        }
+
+        .w100 {
+            width: 100%;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(260px, 1fr));
+            gap: 25px;
+        }
+
+        .feature {
+            padding: 30px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .feature-icon {
+            font-size: 35px;
+            margin-bottom: 15px;
+        }
+
+        .feature h3 {
+            margin-bottom: 12px;
+        }
+
+        .feature p {
+            color: #94a3b8;
+            line-height: 1.7;
+        }
+
+        .success-banner {
+            max-width: 900px;
+            margin: auto;
+            text-align: center;
+            padding: 45px;
+            border-radius: 25px;
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(34,197,94,0.15),
+                    rgba(2,132,199,0.15)
+                );
+            border: 1px solid rgba(74,222,128,0.35);
+        }
+
+        .success-banner .big-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        .success-banner h2 {
+            font-size: 35px;
+            margin-bottom: 15px;
+        }
+
+        .success-banner p {
+            color: #94a3b8;
+            line-height: 1.8;
+        }
+
+        footer {
+            background: #020617;
+            padding: 50px 8%;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        footer h2 {
+            color: #38bdf8;
+            margin-bottom: 12px;
+        }
+
+        footer p {
+            color: #64748b;
+            line-height: 1.8;
+        }
+
+        .footer-line {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #1e293b;
+            color: #475569;
+        }
+
+        .pulse {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #22c55e;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+
+            0% {
+                box-shadow: 0 0 0 0 rgba(34,197,94,0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 12px rgba(34,197,94,0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(34,197,94,0);
+            }
+
+        }
+
+        @keyframes floating {
+
+            0% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+
+            100% {
+                transform: translateY(0);
+            }
+
+        }
+
+        .floating {
+            animation: floating 4s ease-in-out infinite;
+        }
+
+        @media (max-width: 768px) {
+
+            nav ul {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 42px;
+            }
+
+            .hero p {
+                font-size: 16px;
+            }
+
+            section {
+                padding: 60px 5%;
+            }
+
+            .deployment-box {
+                padding: 25px;
+            }
+
+            .arrow {
+                transform: rotate(90deg);
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<header>
+
+    <nav>
+
+        <div class="logo">
+            ⚡ Jenkins <span>Day 16</span>
+        </div>
+
+        <ul>
+            <li><a href="#home">Home</a></li>
+            <li><a href="#status">Status</a></li>
+            <li><a href="#pipeline">Pipeline</a></li>
+            <li><a href="#deployment">Deployment</a></li>
+            <li><a href="#technologies">Technologies</a></li>
+        </ul>
+
+    </nav>
+
+</header>
+
+
+<!-- HERO SECTION -->
+
+<section class="hero" id="home">
+
+    <div class="hero-content">
+
+        <div class="badge">
+            🚀 Jenkins Continuous Deployment
+        </div>
+
+        <h1>
+            Blue-Green
+            <span>Deployment</span>
+        </h1>
+
+        <p>
+            Welcome to Jenkins Day 16.
+            This dashboard demonstrates a modern
+            Blue-Green Deployment strategy using
+            Jenkins, Docker, GitHub and Linux.
+        </p>
+
+        <div class="buttons">
+
+            <a href="#deployment"
+               class="btn primary">
+                Explore Deployment
+            </a>
+
+            <a href="#pipeline"
+               class="btn secondary">
+                View Pipeline
+            </a>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- STATUS -->
+
+<section id="status">
+
+    <div class="section-title">
+
+        <h2>Deployment Status</h2>
+
+        <p>
+            Real-time environment overview
+        </p>
+
+    </div>
+
+    <div class="status-container">
+
+        <div class="status-card floating">
+
+            <div class="status-icon active">
+                🔵
+            </div>
+
+            <h3>BLUE</h3>
+
+            <p>
+                Current production environment.
+                All production traffic is currently
+                routed to the Blue version.
+            </p>
+
+            <br>
+
+            <strong class="active">
+                ● ACTIVE PRODUCTION
+            </strong>
+
+        </div>
+
+
+        <div class="status-card">
+
+            <div class="status-icon success">
+                🟢
+            </div>
+
+            <h3>GREEN</h3>
+
+            <p>
+                Standby environment prepared for
+                the next release and deployment test.
+            </p>
+
+            <br>
+
+            <strong class="success">
+                ● READY FOR DEPLOYMENT
+            </strong>
+
+        </div>
+
+
+        <div class="status-card">
+
+            <div class="status-icon success">
+                ✅
+            </div>
+
+            <h3>JENKINS</h3>
+
+            <p>
+                Jenkins pipeline is successfully
+                connected with GitHub and Docker.
+            </p>
+
+            <br>
+
+            <strong class="success">
+                ● PIPELINE ONLINE
+            </strong>
+
+        </div>
+
+
+        <div class="status-card">
+
+            <div class="status-icon success">
+                🐳
+            </div>
+
+            <h3>DOCKER</h3>
+
+            <p>
+                Application container is built and
+                running successfully.
+            </p>
+
+            <br>
+
+            <strong class="success">
+                ● CONTAINER RUNNING
+            </strong>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- PIPELINE -->
+
+<section id="pipeline">
+
+    <div class="section-title">
+
+        <h2>Jenkins CI/CD Pipeline</h2>
+
+        <p>
+            Automated workflow from source code
+            to production
+        </p>
+
+    </div>
+
+    <div class="pipeline">
+
+        <div class="pipeline-step">
+
+            <div class="number">1</div>
+
+            <h3>GitHub</h3>
+
+            <p>
+                Developer pushes application
+                source code to GitHub.
+            </p>
+
+        </div>
+
+        <div class="arrow">→</div>
+
+        <div class="pipeline-step">
+
+            <div class="number">2</div>
+
+            <h3>Jenkins</h3>
+
+            <p>
+                Jenkins detects the latest
+                source code automatically.
+            </p>
+
+        </div>
+
+        <div class="arrow">→</div>
+
+        <div class="pipeline-step">
+
+            <div class="number">3</div>
+
+            <h3>Build</h3>
+
+            <p>
+                Jenkins builds the application
+                and prepares the deployment.
+            </p>
+
+        </div>
+
+        <div class="arrow">→</div>
+
+        <div class="pipeline-step">
+
+            <div class="number">4</div>
+
+            <h3>Docker</h3>
+
+            <p>
+                Docker creates a portable
+                application container.
+            </p>
+
+        </div>
+
+        <div class="arrow">→</div>
+
+        <div class="pipeline-step">
+
+            <div class="number">5</div>
+
+            <h3>Production</h3>
+
+            <p>
+                Tested version is deployed
+                into the production environment.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- BLUE GREEN -->
+
+<section id="deployment">
+
+    <div class="section-title">
+
+        <h2>Blue-Green Environment</h2>
+
+        <p>
+            Zero-downtime deployment strategy
+        </p>
+
+    </div>
+
+    <div class="deployment-box">
+
+        <div class="deployment-grid">
+
+            <div class="environment blue">
+
+                <h3>🔵 Blue Environment</h3>
+
+                <p>
+                    Blue is the currently active
+                    production environment.
+                </p>
+
+                <ul>
+
+                    <li>Production Traffic</li>
+
+                    <li>Stable Version</li>
+
+                    <li>Health Check Passed</li>
+
+                    <li>Docker Container Active</li>
+
+                    <li>Zero Downtime</li>
+
+                </ul>
+
+            </div>
+
+
+            <div class="environment green">
+
+                <h3>🟢 Green Environment</h3>
+
+                <p>
+                    Green is the new version that
+                    can be tested before switching
+                    production traffic.
+                </p>
+
+                <ul>
+
+                    <li>New Application Version</li>
+
+                    <li>Pre-Production Testing</li>
+
+                    <li>Health Check</li>
+
+                    <li>Ready for Traffic</li>
+
+                    <li>Fast Rollback</li>
+
+                </ul>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- STATISTICS -->
+
+<section>
+
+    <div class="section-title">
+
+        <h2>Deployment Statistics</h2>
+
+        <p>
+            Current project performance
+        </p>
+
+    </div>
+
+    <div class="stats">
+
+        <div class="stat-card">
+
+            <h3>16</h3>
+
+            <p>
+                Jenkins Learning Day
+            </p>
+
+        </div>
+
+        <div class="stat-card">
+
+            <h3>100%</h3>
+
+            <p>
+                Deployment Success
+            </p>
+
+        </div>
+
+        <div class="stat-card">
+
+            <h3>2</h3>
+
+            <p>
+                Deployment Environments
+            </p>
+
+        </div>
+
+        <div class="stat-card">
+
+            <h3>0s</h3>
+
+            <p>
+                Planned Downtime
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- TERMINAL -->
+
+<section>
+
+    <div class="section-title">
+
+        <h2>Deployment Terminal</h2>
+
+        <p>
+            Simulated Jenkins deployment logs
+        </p>
+
+    </div>
+
+    <div class="terminal">
+
+        <div class="terminal-header">
+
+            <span class="circle red"></span>
+
+            <span class="circle yellow"></span>
+
+            <span class="circle green-dot"></span>
+
+            <span class="terminal-title">
+                jenkins@production: ~
+            </span>
+
+        </div>
+
+        <div class="terminal-body">
+
+            <div>
+                <span class="terminal-blue">
+                    jenkins@server
+                </span>:~$
+                <span class="terminal-white">
+                    git pull origin main
+                </span>
+            </div>
+
+            <div>
+                ✔ Git repository updated
+            </div>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <meta name="description"
+          content="Jenkins Day 16 Blue Green Deployment Dashboard">
+
+    <meta name="author"
+          content="Jenkins DevOps Project">
+
+    <title>Jenkins Day 16 | Blue-Green Deployment</title>
+
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background:
+                linear-gradient(
+                    135deg,
+                    #06142e,
+                    #0b2d5c,
+                    #075985,
+                    #0f172a
+                );
+            color: white;
+            min-height: 100vh;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(3, 15, 35, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            padding: 18px 8%;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 25px;
+            font-weight: bold;
+            color: #38bdf8;
+        }
+
+        .logo span {
+            color: white;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 25px;
+        }
+
+        nav ul li a {
+            color: #dbeafe;
+            text-decoration: none;
+            font-size: 15px;
+            transition: 0.3s;
+        }
+
+        nav ul li a:hover {
+            color: #38bdf8;
+        }
+
+        .hero {
+            min-height: 650px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 80px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: #0284c7;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.35;
+            top: -100px;
+            left: -100px;
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            width: 350px;
+            height: 350px;
+            background: #2563eb;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.3;
+            bottom: -100px;
+            right: -100px;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: 900px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(56,189,248,0.15);
+            border: 1px solid #38bdf8;
+            border-radius: 50px;
+            color: #7dd3fc;
+            margin-bottom: 25px;
+        }
+
+        .hero h1 {
+            font-size: 65px;
+            line-height: 1.1;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 span {
+            color: #38bdf8;
+        }
+
+        .hero p {
+            color: #cbd5e1;
+            font-size: 19px;
+            line-height: 1.8;
+            margin-bottom: 35px;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .primary {
+            background: #0284c7;
+            color: white;
+            box-shadow: 0 10px 30px rgba(2,132,199,0.35);
+        }
+
+        .primary:hover {
+            transform: translateY(-4px);
+            background: #0369a1;
+        }
+
+        .secondary {
+            border: 1px solid #38bdf8;
+            color: #7dd3fc;
+        }
+
+        .secondary:hover {
+            background: rgba(56,189,248,0.12);
+        }
+
+        section {
+            padding: 90px 8%;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 55px;
+        }
+
+        .section-title h2 {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .section-title p {
+            color: #94a3b8;
+            font-size: 16px;
+        }
+
+        .status-container {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .status-card {
+            padding: 35px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(10px);
+            transition: 0.3s;
+        }
+
+        .status-card:hover {
+            transform: translateY(-8px);
+            border-color: #38bdf8;
+        }
+
+        .status-icon {
+            font-size: 45px;
+            margin-bottom: 20px;
+        }
+
+        .status-card h3 {
+            font-size: 25px;
+            margin-bottom: 12px;
+        }
+
+        .status-card p {
+            color: #94a3b8;
+            line-height: 1.7;
+        }
+
+        .active {
+            color: #38bdf8;
+        }
+
+        .success {
+            color: #4ade80;
+        }
+
+        .warning {
+            color: #facc15;
+        }
+
+        .danger {
+            color: #fb7185;
+        }
+
+        .pipeline {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            align-items: center;
+        }
+
+        .pipeline-step {
+            text-align: center;
+            padding: 30px 15px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+        }
+
+        .pipeline-step .number {
+            width: 50px;
+            height: 50px;
+            margin: auto;
+            margin-bottom: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0284c7;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .pipeline-step h3 {
+            margin-bottom: 10px;
+        }
+
+        .pipeline-step p {
+            color: #94a3b8;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .arrow {
+            text-align: center;
+            font-size: 30px;
+            color: #38bdf8;
+        }
+
+        .deployment-box {
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(2,132,199,0.25),
+                    rgba(30,64,175,0.2)
+                );
+            border: 1px solid rgba(56,189,248,0.3);
+            border-radius: 25px;
+            padding: 50px;
+        }
+
+        .deployment-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .environment {
+            padding: 30px;
+            border-radius: 20px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .environment.blue {
+            border-top: 5px solid #3b82f6;
+        }
+
+        .environment.green {
+            border-top: 5px solid #22c55e;
+        }
+
+        .environment h3 {
+            font-size: 27px;
+            margin-bottom: 15px;
+        }
+
+        .environment p {
+            color: #94a3b8;
+            line-height: 1.7;
+        }
+
+        .environment ul {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        .environment ul li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            color: #cbd5e1;
+        }
+
+        .environment ul li::before {
+            content: "✓ ";
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 35px 20px;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stat-card h3 {
+            font-size: 45px;
+            color: #38bdf8;
+            margin-bottom: 8px;
+        }
+
+        .stat-card p {
+            color: #94a3b8;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+        }
+
+        .tech {
+            padding: 30px;
+            text-align: center;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.3s;
+        }
+
+        .tech:hover {
+            transform: scale(1.05);
+            background: rgba(56,189,248,0.1);
+        }
+
+        .tech-icon {
+            font-size: 45px;
+            margin-bottom: 15px;
+        }
+
+        .tech h3 {
+            margin-bottom: 8px;
+        }
+
+        .tech p {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .timeline {
+            max-width: 850px;
+            margin: auto;
+            position: relative;
+        }
+
+        .timeline::before {
+            content: "";
+            position: absolute;
+            left: 20px;
+            top: 0;
+            width: 3px;
+            height: 100%;
+            background: #0284c7;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 70px;
+            margin-bottom: 35px;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: 7px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #38bdf8;
+            border: 6px solid #082f49;
+        }
+
+        .timeline-content {
+            padding: 25px;
+            border-radius: 15px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .timeline-content h3 {
+            margin-bottom: 10px;
+            color: #7dd3fc;
+        }
+
+        .timeline-content p {
+            color: #94a3b8;
+            line-height: 1.7;
+        }
+
+        .terminal {
+            max-width: 900px;
+            margin: auto;
+            background: #020617;
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid #334155;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+        }
+
+        .terminal-header {
+            background: #111827;
+            padding: 14px 20px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .circle {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .red {
+            background: #ef4444;
+        }
+
+        .yellow {
+            background: #eab308;
+        }
+
+        .green-dot {
+            background: #22c55e;
+        }
+
+        .terminal-title {
+            margin-left: 10px;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        .terminal-body {
+            padding: 30px;
+            font-family: monospace;
+            color: #4ade80;
+            line-height: 2;
+            overflow-x: auto;
+        }
+
+        .terminal-blue {
+            color: #38bdf8;
+        }
+
+        .terminal-white {
+            color: #e2e8f0;
+        }
+
+        .terminal-yellow {
+            color: #facc15;
+        }
+
+        .progress-container {
+            margin-top: 25px;
+        }
+
+        .progress-title {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .progress-title span {
+            color: #cbd5e1;
+        }
+
+        .progress {
+            height: 10px;
+            background: #1e293b;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background:
+                linear-gradient(
+                    90deg,
+                    #0284c7,
+                    #38bdf8
+                );
+            border-radius: 20px;
+        }
+
+        .w90 {
+            width: 90%;
+        }
+
+        .w95 {
+            width: 95%;
+        }
+
+        .w80 {
+            width: 80%;
+        }
+
+        .w100 {
+            width: 100%;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(260px, 1fr));
+            gap: 25px;
+        }
+
+        .feature {
+            padding: 30px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .feature-icon {
+            font-size: 35px;
+            margin-bottom: 15px;
+        }
+
+        .feature h3 {
+            margin-bottom: 12px;
+        }
+
+        .feature p {
+            color: #94a3b8;
+            line-height: 1.7;
+        }
+
+        .success-banner {
+            max-width: 900px;
+            margin: auto;
+            text-align: center;
+            padding: 45px;
+            border-radius: 25px;
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(34,197,94,0.15),
+                    rgba(2,132,199,0.15)
+                );
+            border: 1px solid rgba(74,222,128,0.35);
+        }
+
+        .success-banner .big-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        .success-banner h2 {
+            font-size: 35px;
+            margin-bottom: 15px;
+        }
+
+        .success-banner p {
+            color: #94a3b8;
+            line-height: 1.8;
+        }
+
+        footer {
+            background: #020617;
+            padding: 50px 8%;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        footer h2 {
+            color: #38bdf8;
+            margin-bottom: 12px;
+        }
+
+        footer p {
+            color: #64748b;
+            line-height: 1.8;
+        }
+
+        .footer-line {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #1e293b;
+            color: #475569;
+        }
+
+        .pulse {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #22c55e;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+
+            0% {
+                box-shadow: 0 0 0 0 rgba(34,197,94,0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 12px rgba(34,197,94,0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(34,197,94,0);
+            }
+
+        }
+
+        @keyframes floating {
+
+            0% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+
+            100% {
+                transform: translateY(0);
+            }
+
+        }
+
+        .floating {
+            animation: floating 4s ease-in-out infinite;
+        }
+
+        @media (max-width: 768px) {
+
+            nav ul {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 42px;
+            }
+
+            .hero p {
+                font-size: 16px;
+            }
+
+            section {
+                padding: 60px 5%;
+            }
+
+            .deployment-box {
+                padding: 25px;
+            }
+
+            .arrow {
+                transform: rotate(90deg);
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<header>
+
+    <nav>
+
+        <div class="logo">
+            ⚡ Jenkins <span>Day 16</span>
+        </div>
+
+        <ul>
+            <li><a href="#home">Home</a></li>
+            <li><a href="#status">Status</a></li>
+            <li><a href="#pipeline">Pipeline</a></li>
+            <li><a href="#deployment">Deployment</a></li>
+            <li><a href="#technologies">Technologies</a></li>
+        </ul>
+
+    </nav>
+
+</header>
+
+
+<!-- HERO SECTION -->
+
+<section class="hero" id="home">
+
+    <div class="hero-content">
+
+        <div class="badge">
+            🚀 Jenkins Continuous Deployment
+        </div>
+
+        <h1>
+            Blue-Green
+            <span>Deployment</span>
+        </h1>
+
+        <p>
+            Welcome to Jenkins Day 16.
+            This dashboard demonstrates a modern
+            Blue-Green Deployment strategy using
+            Jenkins, Docker, GitHub and Linux.
+        </p>
+
+        <div class="buttons">
+
+            <a href="#deployment"
+               class="btn primary">
+                Explore Deployment
+            </a>
+
+            <a href="#pipeline"
+               class="btn secondary">
+                View Pipeline
+            </a>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- STATUS -->
+
+<section id="status">
+
+    <div class="section-title">
+
+        <h2>Deployment Status</h2>
+
+        <p>
+            Real-time environment overview
+        </p>
+
+    </div>
+
+    <div class="status-container">
+
+        <div class="status-card floating">
+
+            <div class="status-icon active">
+                🔵
+            </div>
+
+            <h3>BLUE</h3>
+
+            <p>
+                Current production environment.
+                All production traffic is currently
+                routed to the Blue version.
+            </p>
+
+            <br>
+
+            <strong class="active">
+                ● ACTIVE PRODUCTION
+            </strong>
+
+        </div>
+
+
+        <div class="status-card">
+
+            <div class="status-icon success">
+                🟢
+            </div>
+
+            <h3>GREEN</h3>
+
+            <p>
+                Standby environment prepared for
+                the next release and deployment test.
+            </p>
+
+            <br>
+
+            <strong class="success">
+                ● READY FOR DEPLOYMENT
+            </strong>
+
+        </div>
+
+
+        <div class="status-card">
+
+            <div class="status-icon success">
+                ✅
+            </div>
+
+            <h3>JENKINS</h3>
+
+            <p>
+                Jenkins pipeline is successfully
+                connected with GitHub and Docker.
+            </p>
+
+            <br>
+
+            <strong class="success">
+                ● PIPELINE ONLINE
+            </strong>
+
+        </div>
+
+
+        <div class="status-card">
+
+            <div class="status-icon success">
+                🐳
+            </div>
+
+            <h3>DOCKER</h3>
+
+            <p>
+                Application container is built and
+                running successfully.
+            </p>
+
+            <br>
+
+            <strong class="success">
+                ● CONTAINER RUNNING
+            </strong>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- PIPELINE -->
+
+<section id="pipeline">
+
+    <div class="section-title">
+
+        <h2>Jenkins CI/CD Pipeline</h2>
+
+        <p>
+            Automated workflow from source code
+            to production
+        </p>
+
+    </div>
+
+    <div class="pipeline">
+
+        <div class="pipeline-step">
+
+            <div class="number">1</div>
+
+            <h3>GitHub</h3>
+
+            <p>
+                Developer pushes application
+                source code to GitHub.
+            </p>
+
+        </div>
+
+        <div class="arrow">→</div>
+
+        <div class="pipeline-step">
+
+            <div class="number">2</div>
+
+            <h3>Jenkins</h3>
+
+            <p>
+                Jenkins detects the latest
+                source code automatically.
+            </p>
+
+        </div>
+
+        <div class="arrow">→</div>
+
+        <div class="pipeline-step">
+
+            <div class="number">3</div>
+
+            <h3>Build</h3>
+
+            <p>
+                Jenkins builds the application
+                and prepares the deployment.
+            </p>
+
+        </div>
+
+        <div class="arrow">→</div>
+
+        <div class="pipeline-step">
+
+            <div class="number">4</div>
+
+            <h3>Docker</h3>
+
+            <p>
+                Docker creates a portable
+                application container.
+            </p>
+
+        </div>
+
+        <div class="arrow">→</div>
+
+        <div class="pipeline-step">
+
+            <div class="number">5</div>
+
+            <h3>Production</h3>
+
+            <p>
+                Tested version is deployed
+                into the production environment.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- BLUE GREEN -->
+
+<section id="deployment">
+
+    <div class="section-title">
+
+        <h2>Blue-Green Environment</h2>
+
+        <p>
+            Zero-downtime deployment strategy
+        </p>
+
+    </div>
+
+    <div class="deployment-box">
+
+        <div class="deployment-grid">
+
+            <div class="environment blue">
+
+                <h3>🔵 Blue Environment</h3>
+
+                <p>
+                    Blue is the currently active
+                    production environment.
+                </p>
+
+                <ul>
+
+                    <li>Production Traffic</li>
+
+                    <li>Stable Version</li>
+
+                    <li>Health Check Passed</li>
+
+                    <li>Docker Container Active</li>
+
+                    <li>Zero Downtime</li>
+
+                </ul>
+
+            </div>
+
+
+            <div class="environment green">
+
+                <h3>🟢 Green Environment</h3>
+
+                <p>
+                    Green is the new version that
+                    can be tested before switching
+                    production traffic.
+                </p>
+
+                <ul>
+
+                    <li>New Application Version</li>
+
+                    <li>Pre-Production Testing</li>
+
+                    <li>Health Check</li>
+
+                    <li>Ready for Traffic</li>
+
+                    <li>Fast Rollback</li>
+
+                </ul>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- STATISTICS -->
+
+<section>
+
+    <div class="section-title">
+
+        <h2>Deployment Statistics</h2>
+
+        <p>
+            Current project performance
+        </p>
+
+    </div>
+
+    <div class="stats">
+
+        <div class="stat-card">
+
+            <h3>16</h3>
+
+            <p>
+                Jenkins Learning Day
+            </p>
+
+        </div>
+
+        <div class="stat-card">
+
+            <h3>100%</h3>
+
+            <p>
+                Deployment Success
+            </p>
+
+        </div>
+
+        <div class="stat-card">
+
+            <h3>2</h3>
+
+            <p>
+                Deployment Environments
+            </p>
+
+        </div>
+
+        <div class="stat-card">
+
+            <h3>0s</h3>
+
+            <p>
+                Planned Downtime
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- TERMINAL -->
+
+<section>
+
+    <div class="section-title">
+
+        <h2>Deployment Terminal</h2>
+
+        <p>
+            Simulated Jenkins deployment logs
+        </p>
+
+    </div>
+
+    <div class="terminal">
+
+        <div class="terminal-header">
+
+            <span class="circle red"></span>
+
+            <span class="circle yellow"></span>
+
+            <span class="circle green-dot"></span>
+
+            <span class="terminal-title">
+                jenkins@production: ~
+            </span>
+
+        </div>
+
+        <div class="terminal-body">
+
+            <div>
+                <span class="terminal-blue">
+                    jenkins@server
+                </span>:~$
+                <span class="terminal-white">
+                    git pull origin main
+                </span>
+            </div>
+
+            <div>
+                ✔ Git repository updated
+            </div>
+
+            <div>
+                <span class="terminal-blue">
+                    jenkins@server
+                </span>:~$
+                <span class="terminal-white">
+                    docker build -t blue-app .
+                </span>
+            </div>
+
+            <div>
+                ✔ Docker image created
+            </div>
+
+            <div>
+                <span class="terminal-blue">
+                    jenkins@server
+                </span>:~$
+                <span class="terminal-white">
+                    docker run blue-app
+                </span>
+            </div>
+
+            <div>
+                ✔ Container started successfully
+            </div>
+
+            <div>
+                <span class="terminal-blue">
+                    jenkins@server
+                </span>:~$
+                <span class="terminal-white">
+                    health-check
+                </span>
+            </div>
+
+            <div class="terminal-yellow">
+                Checking application health...
+            </div>
+
+            <div>
+                ✔ Application healthy
+            </div>
+
+            <div>
+                <span class="terminal-blue">
+                    jenkins@server
+                </span>:~$
+                <span class="terminal-white">
+                    deployment-status
+                </span>
+            </div>
+
+            <div class="terminal-yellow">
+                BLUE environment is ACTIVE
+            </div>
+
+            <div>
+                ✔ Deployment completed successfully
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- TECHNOLOGIES -->
+
+<section id="technologies">
+
+    <div class="section-title">
+
+        <h2>Technologies Used</h2>
+
+        <p>
+            Tools used in the Jenkins Day 16 project
+        </p>
+
+    </div>
+
+    <div class="tech-grid">
+
+        <div class="tech">
+
+            <div class="tech-icon">
+                ⚙️
+            </div>
+
+            <h3>Jenkins</h3>
+
+            <p>
+                CI/CD automation server
+            </p>
+
+        </div>
+
+
+        <div class="tech">
+
+            <div class="tech-icon">
+                🐙
+            </div>
+
+            <h3>GitHub</h3>
+
+            <p>
+                Source code management
+            </p>
+
+        </div>
+
+
+        <div class="tech">
+
+            <div class="tech-icon">
+                🐳
+            </div>
+
+            <h3>Docker</h3>
+
+            <p>
+                Application containerization
+            </p>
+
+        </div>
+
+
+        <div class="tech">
+
+            <div class="tech-icon">
+                🐧
+            </div>
+
+            <h3>Linux</h3>
+
+            <p>
+                Deployment server environment
+            </p>
+
+        </div>
+
+
+        <div class="tech">
+
+            <div class="tech-icon">
+                🌐
+            </div>
+
+            <h3>HTML</h3>
+
+            <p>
+                Application interface
+            </p>
+
+        </div>
+
+
+        <div class="tech">
+
+            <div class="tech-icon">
+                🎨
+            </div>
+
+            <h3>CSS</h3>
+
+            <p>
+                Modern responsive design
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- PROGRESS -->
+
+<section>
+
+    <div class="section-title">
+
+        <h2>Project Progress</h2>
+
+        <p>
+            Deployment readiness metrics
+        </p>
+
+    </div>
+
+    <div class="status-card">
+
+        <div class="progress-container">
+
+            <div class="progress-title">
+
+                <span>
+                    Jenkins Pipeline
+                </span>
+
+                <span>
+                    95%
+                </span>
+
+            </div>
+
+            <div class="progress">
+
+                <div class="progress-bar w95"></div>
+
+            </div>
+
+        </div>
+
+
+        <div class="progress-container">
+
+            <div class="progress-title">
+
+                <span>
+                    Docker Integration
+                </span>
+
+                <span>
+                    90%
+                </span>
+
+            </div>
+
+            <div class="progress">
+
+                <div class="progress-bar w90"></div>
+
+            </div>
+
+        </div>
+
+
+        <div class="progress-container">
+
+            <div class="progress-title">
+
+                <span>
+                    Blue-Green Deployment
+                </span>
+
+                <span>
+                    80%
+                </span>
+
+            </div>
+
+            <div class="progress">
+
+                <div class="progress-bar w80"></div>
+
+            </div>
+
+        </div>
+
+
+        <div class="progress-container">
+
+            <div class="progress-title">
+
+                <span>
+                    Production Readiness
+                </span>
+
+                <span>
+                    100%
+                </span>
+
+            </div>
+
+            <div class="progress">
+
+                <div class="progress-bar w100"></div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- TIMELINE -->
+
+<section>
+
+    <div class="section-title">
+
+        <h2>Deployment Flow</h2>
+
+        <p>
+            How the Blue-Green deployment works
+        </p>
+
+    </div>
+
+    <div class="timeline">
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 01 — Developer Push</h3>
+
+                <p>
+                    Developer updates the source code
+                    and pushes the changes to GitHub.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 02 — Jenkins Trigger</h3>
+
+                <p>
+                    Jenkins detects the new commit
+                    and automatically starts the pipeline.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 03 — Build Application</h3>
+
+                <p>
+                    Jenkins builds the latest version
+                    of the application.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 04 — Create Docker Image</h3>
+
+                <p>
+                    Docker packages the application
+                    into an isolated container image.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 05 — Deploy Green</h3>
+
+                <p>
+                    The new application version is
+                    deployed to the Green environment.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 06 — Health Check</h3>
+
+                <p>
+                    Jenkins checks whether the Green
+                    environment is healthy and working.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 07 — Switch Traffic</h3>
+
+                <p>
+                    Production traffic is switched
+                    from Blue to Green after validation.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 08 — Rollback if Required</h3>
+
+                <p>
+                    If any problem occurs, traffic can
+                    quickly return to the previous version.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- FEATURES -->
+
+<section>
+
+    <div class="section-title">
+
+        <h2>Why Blue-Green Deployment?</h2>
+
+        <p>
+            Major advantages of this deployment strategy
+        </p>
+
+    </div>
+
+    <div class="features">
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                ⚡
+            </div>
+
+            <h3>Zero Downtime</h3>
+
+            <p>
+                Users can continue accessing the
+                application while a new version
+                is being prepared.
+            </p>
+
+        </div>
+
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                🔄
+            </div>
+
+            <h3>Fast Rollback</h3>
+
+            <p>
+                Traffic can be switched back to
+                the previous environment quickly
+                when a deployment fails.
+            </p>
+
+        </div>
+
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                🧪
+            </div>
+
+            <h3>Safe Testing</h3>
+
+            <p>
+                The new version can be tested
+                before receiving production traffic.
+            </p>
+
+        </div>
+
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                🤖
+            </div>
+
+            <h3>Automation</h3>
+
+            <p>
+                Jenkins automates build, testing
+                and deployment activities.
+            </p>
+
+        </div>
+
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                📦
+            </div>
+
+            <h3>Containerized</h3>
+
+            <p>
+                Docker provides consistent
+                application environments.
+            </p>
+
+        </div>
+
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                🔐
+            </div>
+
+            <h3>Reliable Release</h3>
+
+            <p>
+                Production releases become safer,
+                predictable and easier to manage.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- SUCCESS -->
+
+<section>
+
+    <div class="success-banner">
+
+        <div class="big-icon">
+            🎉
+        </div>
+
+        <h2>
+            Blue-Green Deployment Successful!
+        </h2>
+
+        <p>
+            <span class="pulse"></span>
+            Production environment is healthy.
+            Blue version is currently serving
+            production traffic.
+        </p>
+
+        <br>
+
+        <p>
+            Jenkins Day 16 successfully demonstrates
+            automated deployment using GitHub,
+            Jenkins, Docker and Linux.
+        </p>
+
+    </div>
+
+</section>
+
+
+<!-- FOOTER -->
+
+<footer>
+
+    <h2>
+        🚀 Jenkins Day 16
+    </h2>
+
+    <p>
+        Blue-Green Deployment Dashboard
+    </p>
+
+    <p>
+        GitHub → Jenkins → Docker → Linux → Production
+    </p>
+
+    <div class="footer-line">
+
+        <p>
+            Built for DevOps Learning & Continuous Deployment
+        </p>
+
+        <p>
+            🔵 BLUE Production |
+            🟢 GREEN Staging |
+            ⚙️ Jenkins Automation
+        </p>
+
+    </div>
+
+</footer>
+
+
+</body>
+
+</html>
+            <div>
+                <span class="terminal-blue">
+                    jenkins@server
+                </span>:~$
+                <span class="terminal-white">
+                    docker build -t blue-app .
+                </span>
+            </div>
+
+            <div>
+                ✔ Docker image created
+            </div>
+
+            <div>
+                <span class="terminal-blue">
+                    jenkins@server
+                </span>:~$
+                <span class="terminal-white">
+                    docker run blue-app
+                </span>
+            </div>
+
+            <div>
+                ✔ Container started successfully
+            </div>
+
+            <div>
+                <span class="terminal-blue">
+                    jenkins@server
+                </span>:~$
+                <span class="terminal-white">
+                    health-check
+                </span>
+            </div>
+
+            <div class="terminal-yellow">
+                Checking application health...
+            </div>
+
+            <div>
+                ✔ Application healthy
+            </div>
+
+            <div>
+                <span class="terminal-blue">
+                    jenkins@server
+                </span>:~$
+                <span class="terminal-white">
+                    deployment-status
+                </span>
+            </div>
+
+            <div class="terminal-yellow">
+                BLUE environment is ACTIVE
+            </div>
+
+            <div>
+                ✔ Deployment completed successfully
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- TECHNOLOGIES -->
+
+<section id="technologies">
+
+    <div class="section-title">
+
+        <h2>Technologies Used</h2>
+
+        <p>
+            Tools used in the Jenkins Day 16 project
+        </p>
+
+    </div>
+
+    <div class="tech-grid">
+
+        <div class="tech">
+
+            <div class="tech-icon">
+                ⚙️
+            </div>
+
+            <h3>Jenkins</h3>
+
+            <p>
+                CI/CD automation server
+            </p>
+
+        </div>
+
+
+        <div class="tech">
+
+            <div class="tech-icon">
+                🐙
+            </div>
+
+            <h3>GitHub</h3>
+
+            <p>
+                Source code management
+            </p>
+
+        </div>
+
+
+        <div class="tech">
+
+            <div class="tech-icon">
+                🐳
+            </div>
+
+            <h3>Docker</h3>
+
+            <p>
+                Application containerization
+            </p>
+
+        </div>
+
+
+        <div class="tech">
+
+            <div class="tech-icon">
+                🐧
+            </div>
+
+            <h3>Linux</h3>
+
+            <p>
+                Deployment server environment
+            </p>
+
+        </div>
+
+
+        <div class="tech">
+
+            <div class="tech-icon">
+                🌐
+            </div>
+
+            <h3>HTML</h3>
+
+            <p>
+                Application interface
+            </p>
+
+        </div>
+
+
+        <div class="tech">
+
+            <div class="tech-icon">
+                🎨
+            </div>
+
+            <h3>CSS</h3>
+
+            <p>
+                Modern responsive design
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- PROGRESS -->
+
+<section>
+
+    <div class="section-title">
+
+        <h2>Project Progress</h2>
+
+        <p>
+            Deployment readiness metrics
+        </p>
+
+    </div>
+
+    <div class="status-card">
+
+        <div class="progress-container">
+
+            <div class="progress-title">
+
+                <span>
+                    Jenkins Pipeline
+                </span>
+
+                <span>
+                    95%
+                </span>
+
+            </div>
+
+            <div class="progress">
+
+                <div class="progress-bar w95"></div>
+
+            </div>
+
+        </div>
+
+
+        <div class="progress-container">
+
+            <div class="progress-title">
+
+                <span>
+                    Docker Integration
+                </span>
+
+                <span>
+                    90%
+                </span>
+
+            </div>
+
+            <div class="progress">
+
+                <div class="progress-bar w90"></div>
+
+            </div>
+
+        </div>
+
+
+        <div class="progress-container">
+
+            <div class="progress-title">
+
+                <span>
+                    Blue-Green Deployment
+                </span>
+
+                <span>
+                    80%
+                </span>
+
+            </div>
+
+            <div class="progress">
+
+                <div class="progress-bar w80"></div>
+
+            </div>
+
+        </div>
+
+
+        <div class="progress-container">
+
+            <div class="progress-title">
+
+                <span>
+                    Production Readiness
+                </span>
+
+                <span>
+                    100%
+                </span>
+
+            </div>
+
+            <div class="progress">
+
+                <div class="progress-bar w100"></div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- TIMELINE -->
+
+<section>
+
+    <div class="section-title">
+
+        <h2>Deployment Flow</h2>
+
+        <p>
+            How the Blue-Green deployment works
+        </p>
+
+    </div>
+
+    <div class="timeline">
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 01 — Developer Push</h3>
+
+                <p>
+                    Developer updates the source code
+                    and pushes the changes to GitHub.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 02 — Jenkins Trigger</h3>
+
+                <p>
+                    Jenkins detects the new commit
+                    and automatically starts the pipeline.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 03 — Build Application</h3>
+
+                <p>
+                    Jenkins builds the latest version
+                    of the application.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 04 — Create Docker Image</h3>
+
+                <p>
+                    Docker packages the application
+                    into an isolated container image.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 05 — Deploy Green</h3>
+
+                <p>
+                    The new application version is
+                    deployed to the Green environment.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 06 — Health Check</h3>
+
+                <p>
+                    Jenkins checks whether the Green
+                    environment is healthy and working.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 07 — Switch Traffic</h3>
+
+                <p>
+                    Production traffic is switched
+                    from Blue to Green after validation.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="timeline-item">
+
+            <div class="timeline-dot"></div>
+
+            <div class="timeline-content">
+
+                <h3>Step 08 — Rollback if Required</h3>
+
+                <p>
+                    If any problem occurs, traffic can
+                    quickly return to the previous version.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- FEATURES -->
+
+<section>
+
+    <div class="section-title">
+
+        <h2>Why Blue-Green Deployment?</h2>
+
+        <p>
+            Major advantages of this deployment strategy
+        </p>
+
+    </div>
+
+    <div class="features">
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                ⚡
+            </div>
+
+            <h3>Zero Downtime</h3>
+
+            <p>
+                Users can continue accessing the
+                application while a new version
+                is being prepared.
+            </p>
+
+        </div>
+
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                🔄
+            </div>
+
+            <h3>Fast Rollback</h3>
+
+            <p>
+                Traffic can be switched back to
+                the previous environment quickly
+                when a deployment fails.
+            </p>
+
+        </div>
+
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                🧪
+            </div>
+
+            <h3>Safe Testing</h3>
+
+            <p>
+                The new version can be tested
+                before receiving production traffic.
+            </p>
+
+        </div>
+
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                🤖
+            </div>
+
+            <h3>Automation</h3>
+
+            <p>
+                Jenkins automates build, testing
+                and deployment activities.
+            </p>
+
+        </div>
+
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                📦
+            </div>
+
+            <h3>Containerized</h3>
+
+            <p>
+                Docker provides consistent
+                application environments.
+            </p>
+
+        </div>
+
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                🔐
+            </div>
+
+            <h3>Reliable Release</h3>
+
+            <p>
+                Production releases become safer,
+                predictable and easier to manage.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- SUCCESS -->
+
+<section>
+
+    <div class="success-banner">
+
+        <div class="big-icon">
+            🎉
+        </div>
+
+        <h2>
+            Blue-Green Deployment Successful!
+        </h2>
+
+        <p>
+            <span class="pulse"></span>
+            Production environment is healthy.
+            Blue version is currently serving
+            production traffic.
+        </p>
+
+        <br>
+
+        <p>
+            Jenkins Day 16 successfully demonstrates
+            automated deployment using GitHub,
+            Jenkins, Docker and Linux.
+        </p>
+
+    </div>
+
+</section>
+
+
+<!-- FOOTER -->
+
+<footer>
+
+    <h2>
+        🚀 Jenkins Day 16
+    </h2>
+
+    <p>
+        Blue-Green Deployment Dashboard
+    </p>
+
+    <p>
+        GitHub → Jenkins → Docker → Linux → Production
+    </p>
+
+    <div class="footer-line">
+
+        <p>
+            Built for DevOps Learning & Continuous Deployment
+        </p>
+
+        <p>
+            🔵 BLUE Production |
+            🟢 GREEN Staging |
+            ⚙️ Jenkins Automation
+        </p>
+
+    </div>
+
+</footer>
+
+
+</body>
+
+</html>
